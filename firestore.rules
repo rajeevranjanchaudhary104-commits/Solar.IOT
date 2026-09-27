@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // System Owner / Administrator
+    function isOwnerAdmin() {
+      return request.auth != null && 
+        request.auth.token.email == 'rajeevranjanchaudhary104@gmail.com';
+    }
+
+    // Research Mode: Student slots, Teacher slots, School name and address
+    match /solar_iot/research_data {
+      allow read: if true;
+      allow write: if isOwnerAdmin();
+    }
+
+    // Hardware configuration: Firmware code, pin layout, and sensor specifications
+    match /solar_iot/hardware_config {
+      allow read: if true;
+      allow write: if isOwnerAdmin();
+    }
+
+    // 20 Customizable slots for arbitrary project parameters
+    match /solar_iot/custom_slots {
+      allow read: if true;
+      allow write: if isOwnerAdmin();
+    }
+
+    // About section content (2 photo slots, 1 video section, 300-word summary):
+    match /solar_iot/about_content {
+      allow read: if true;
+      allow write: if isOwnerAdmin();
+    }
+
+    // Solar telemetry document (node_01):
+    // Device/ESP32 writes sensor data, and operators trigger cleaning commands
+    match /solar_iot/{deviceId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Historical telemetry logs (time series)
+    match /solar_iot/{deviceId}/history/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Cleaning logs
+    match /cleaning_logs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // User settings & custom calculation saved presets
+    match /user_presets/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+  }
+}

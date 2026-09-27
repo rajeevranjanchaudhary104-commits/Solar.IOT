@@ -1,0 +1,6 @@
+{
+  "name": "Solar.IOT - ESP32 Smart Solar Monitoring & Cleaning",
+  "description": "Smart solar panel monitoring and cleaning dashboard with real-time ESP32 IoT telemetry, solar sizing & battery calculators, and automated cleaning controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

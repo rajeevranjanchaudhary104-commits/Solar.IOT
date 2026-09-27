@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Smooth scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #090d16;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+  }
+}
+
+@keyframes fall {
+  0% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(240px);
+    opacity: 0;
+  }
+}
+
+.animate-fall {
+  animation: fall 0.9s linear infinite;
+}
+
+/* Fingertip Touch & Wipe Animations */
+@keyframes fingertipPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px 4px rgba(34, 211, 238, 0.7), 0 0 30px 8px rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    transform: scale(1.25);
+    box-shadow: 0 0 25px 8px rgba(34, 211, 238, 0.9), 0 0 45px 14px rgba(245, 158, 11, 0.6);
+  }
+}
+
+@keyframes touchRippleRing {
+  0% {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@keyframes fingertipGuideSlide {
+  0% {
+    left: 8%;
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.1);
+  }
+  75% {
+    left: 88%;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  90%, 100% {
+    left: 92%;
+    opacity: 0;
+    transform: translateY(4px) scale(0.9);
+  }
+}
+
+.animate-fingertip-pulse {
+  animation: fingertipPulse 1.2s ease-in-out infinite;
+}
+
+.animate-touch-ripple {
+  animation: touchRippleRing 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+.animate-fingertip-guide {
+  animation: fingertipGuideSlide 3.2s ease-in-out infinite;
+}

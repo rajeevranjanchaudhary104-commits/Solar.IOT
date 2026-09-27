@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "SolarIotNode": {
+      "title": "SolarIotNode",
+      "description": "Telemetry, power generation, and actuator command state for solar IoT hardware nodes",
+      "type": "object",
+      "properties": {
+        "voltage": { "type": "number", "description": "Solar PV array voltage in Volts" },
+        "current": { "type": "number", "description": "Current output in Amperes" },
+        "power": { "type": "number", "description": "Generated power in Watts" },
+        "highestWattToday": { "type": "number", "description": "Daily peak generation in Watts" },
+        "temperature": { "type": "number", "description": "Panel surface temperature in Celsius" },
+        "batteryPercent": { "type": "number", "description": "Storage battery state of charge percentage" },
+        "isRaining": { "type": "boolean", "description": "Precipitation detection status" },
+        "lastCleanedTime": { "type": "string", "description": "Formatted timestamp of last wiper cleaning sweep" },
+        "cleaningStatus": { "type": "string", "description": "Current cleaning state: idle, cleaning, completed" },
+        "pumpActive": { "type": "boolean", "description": "State of water pump spray relay" },
+        "wiperActive": { "type": "boolean", "description": "State of motorized squeegee wiper relay" },
+        "command": { "type": "string", "description": "Hardware command: IDLE, START_CLEANING, STOP_CLEANING" },
+        "espConnected": { "type": "boolean", "description": "Microcontroller heartbeat indicator" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of last telemetry ingestion" }
+      }
+    },
+    "AboutSectionContent": {
+      "title": "AboutSectionContent",
+      "description": "Editable about section content containing 2 photo slots, 1 video section, and a 300-word engineering summary",
+      "type": "object",
+      "properties": {
+        "summary": { "type": "string", "description": "Detailed 300-word engineering and system overview summary" },
+        "photo1Url": { "type": "string", "description": "URL for photo slot 1" },
+        "photo1Title": { "type": "string", "description": "Title for photo slot 1" },
+        "photo1Caption": { "type": "string", "description": "Description/caption for photo slot 1" },
+        "photo2Url": { "type": "string", "description": "URL for photo slot 2" },
+        "photo2Title": { "type": "string", "description": "Title for photo slot 2" },
+        "photo2Caption": { "type": "string", "description": "Description/caption for photo slot 2" },
+        "videoUrl": { "type": "string", "description": "YouTube embed or video stream URL for video section" },
+        "videoTitle": { "type": "string", "description": "Title for video section" },
+        "videoDescription": { "type": "string", "description": "Description for video section" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp" }
+      }
+    },
+    "ProjectResearchInfo": {
+      "title": "ProjectResearchInfo",
+      "description": "Research mode details including 2 student slots, 2 teacher slots, and school name and address",
+      "type": "object",
+      "properties": {
+        "student1Name": { "type": "string" },
+        "student1Role": { "type": "string" },
+        "student2Name": { "type": "string" },
+        "student2Role": { "type": "string" },
+        "teacher1Name": { "type": "string" },
+        "teacher1Subject": { "type": "string" },
+        "teacher2Name": { "type": "string" },
+        "teacher2Subject": { "type": "string" },
+        "schoolName": { "type": "string" },
+        "schoolAddress": { "type": "string" },
+        "projectTitle": { "type": "string" },
+        "projectDescription": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "HardwareConfig": {
+      "title": "HardwareConfig",
+      "description": "Customizable firmware code, pin layout, and sensor specifications editable by owner",
+      "type": "object",
+      "properties": {
+        "firmwareCode": { "type": "string" },
+        "pinINA219SDA": { "type": "string" },
+        "pinINA219SCL": { "type": "string" },
+        "pinLM35": { "type": "string" },
+        "pinRainDigital": { "type": "string" },
+        "pinWiperRelay": { "type": "string" },
+        "pinPumpRelay": { "type": "string" },
+        "microcontrollerType": { "type": "string" },
+        "sensorCalibrationNotes": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "CustomSlots": {
+      "title": "CustomSlots",
+      "description": "20 arbitrary customizable slots editable by owner in Firebase",
+      "type": "object",
+      "properties": {
+        "slots": { "type": "array", "description": "List of 20 customizable title/value slots" },
+        "updatedAt": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/solar_iot/{nodeId}": {
+      "schema": "SolarIotNode",
+      "description": "Hardware telemetry, live sensor data and remote wiper commands"
+    },
+    "/solar_iot/about_content": {
+      "schema": "AboutSectionContent",
+      "description": "Editable about section containing 2 photo slots, 1 video section, and 300-word summary stored in Firebase"
+    },
+    "/solar_iot/research_data": {
+      "schema": "ProjectResearchInfo",
+      "description": "Research mode data: 2 student slots, 2 teacher slots, and school name/address"
+    },
+    "/solar_iot/hardware_config": {
+      "schema": "HardwareConfig",
+      "description": "Firmware code and pin layout configuration editable by owner"
+    },
+    "/solar_iot/custom_slots": {
+      "schema": "CustomSlots",
+      "description": "20 custom slots for editing any custom parameter, metric, or note"
+    }
+  }
+}
