@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+html, body {
+  background-color: #000000;
+  color: #f1f5f9;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+#root {
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+  min-height: 100vh;
+}
+
 @layer utilities {
   /* Smooth scrollbars */
   ::-webkit-scrollbar {
@@ -7,7 +25,7 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #090d16;
+    background: #000000;
   }
   ::-webkit-scrollbar-thumb {
     background: #1e293b;
@@ -92,3 +110,196 @@
 .animate-fingertip-guide {
   animation: fingertipGuideSlide 3.2s ease-in-out infinite;
 }
+
+/* ==========================================================================
+   RESPONSIVE AUTO-FIT / AUTO-FILL GRID SYSTEM & OVERFLOW PREVENTION
+   Ensures stats cards, dials, and multi-column grids adapt dynamically with
+   auto-fit and auto-fill on tablets, netbooks, and smaller laptop screens (768px-1280px)
+   with zero horizontal track blowout or overflow.
+   ========================================================================== */
+
+/* Universal grid item blowout protection */
+.grid {
+  width: 100%;
+  max-width: 100%;
+}
+
+.grid > * {
+  min-width: 0; /* Prevents text/SVG/gauge children from blowing out grid columns */
+  max-width: 100%;
+}
+
+/* Auto-fit and Auto-fill reusable utility classes */
+.grid-auto-fit-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+}
+
+.grid-auto-fit-gauges {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+}
+
+.grid-auto-fit-xs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+}
+
+.grid-auto-fit-sm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 175px), 1fr));
+}
+
+.grid-auto-fit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.grid-auto-fit-md {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+}
+
+.grid-auto-fit-lg {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+
+.grid-auto-fill {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+}
+
+.grid-auto-fill-sm {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+}
+
+/* Tablet & Smaller Laptop Screen Breakpoints (640px to 1280px)
+   Automatically converts fixed multi-column grid layouts into auto-fit
+   tracks so cards wrap gracefully with no clipping or horizontal scrolling */
+@media (min-width: 640px) and (max-width: 1280px) {
+  /* 4-column stats cards (like the top metrics bar in LiveDashboard) */
+  .grid.grid-cols-2.sm\:grid-cols-4,
+  .grid[class*="sm:grid-cols-4"],
+  .grid[class*="grid-cols-4"] {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)) !important;
+  }
+
+  /* 5-column dials & gauges in LiveDashboard */
+  .grid[class*="lg:grid-cols-5"],
+  .grid.grid-cols-2.sm\:grid-cols-3.lg\:grid-cols-5,
+  .grid[class*="xl:grid-cols-5"] {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)) !important;
+  }
+
+  /* 3-column feature and chart cards on tablets and mid laptops */
+  .grid[class*="lg:grid-cols-3"],
+  .grid[class*="md:grid-cols-3"],
+  .grid[class*="sm:grid-cols-3"] {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)) !important;
+  }
+
+  /* 4-column weather/spec grids on tablets */
+  .grid[class*="lg:grid-cols-4"] {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)) !important;
+  }
+}
+
+/* Extra safety for smaller mobile screens under 640px */
+@media (max-width: 639px) {
+  .grid[class*="sm:grid-cols-4"] {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  }
+
+  .grid[class*="lg:grid-cols-5"] {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 135px), 1fr));
+  }
+}
+
+/* ==========================================================================
+   WHITE / LIGHT THEME STYLES (theme-light)
+   Crisp, clean daylight appearance with high contrast and soft shadows
+   ========================================================================== */
+.theme-light,
+[data-theme="light"] {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.theme-light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.theme-light header,
+.theme-light nav,
+.theme-light footer {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .bg-black,
+.theme-light .bg-zinc-950,
+.theme-light .bg-slate-950 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+}
+
+.theme-light .bg-zinc-900,
+.theme-light .bg-slate-900,
+.theme-light .bg-zinc-900\/60,
+.theme-light .bg-zinc-900\/40 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.theme-light .border-zinc-800,
+.theme-light .border-zinc-900,
+.theme-light .border-slate-800,
+.theme-light .border-slate-900,
+.theme-light .border-zinc-800\/80 {
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .text-white {
+  color: #0f172a !important;
+}
+
+.theme-light .text-zinc-200,
+.theme-light .text-zinc-300,
+.theme-light .text-slate-300 {
+  color: #1e293b !important;
+}
+
+.theme-light .text-zinc-400,
+.theme-light .text-slate-400 {
+  color: #475569 !important;
+}
+
+.theme-light .text-zinc-500,
+.theme-light .text-slate-500 {
+  color: #64748b !important;
+}
+
+.theme-light input,
+.theme-light textarea,
+.theme-light select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.theme-light pre {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+

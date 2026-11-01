@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "security_system": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["updated_at", "last_seen", "system_state"]
+    },
+    "solar_iot": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["updated_at", "timestamp"]
+    },
+    "node_01": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["updated_at", "updatedAt"]
+    }
+  }
+}

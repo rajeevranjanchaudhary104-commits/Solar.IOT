@@ -10,7 +10,10 @@ service cloud.firestore {
     // System Owner / Administrator
     function isOwnerAdmin() {
       return request.auth != null && 
-        request.auth.token.email == 'rajeevranjanchaudhary104@gmail.com';
+        (request.auth.token.email == 'sushilnisha23112004@gmail.com' ||
+         request.auth.token.email == 'rajeevranjanchaudhary104@gmail.com' ||
+         request.auth.token.email == 'devapaliwal1234@gmail.com' ||
+         request.auth.token.email == 'arjunparth0001@gmail.com');
     }
 
     // Research Mode: Student slots, Teacher slots, School name and address
@@ -31,14 +34,31 @@ service cloud.firestore {
       allow write: if isOwnerAdmin();
     }
 
-    // About section content (2 photo slots, 1 video section, 300-word summary):
+    // About section content (photos, videos, summary):
     match /solar_iot/about_content {
       allow read: if true;
       allow write: if isOwnerAdmin();
     }
 
-    // Solar telemetry document (node_01):
-    // Device/ESP32 writes sensor data, and operators trigger cleaning commands
+    // Solar Buy Links & Sizing Presets (Luminous, Tata, Waaree, Loom Solar):
+    match /solar_iot/buy_links {
+      allow read: if true;
+      allow write: if isOwnerAdmin();
+    }
+
+    // Solar Store Settings & Custom Products catalog:
+    match /solar_iot/store_settings {
+      allow read: if true;
+      allow write: if isOwnerAdmin();
+    }
+
+    match /solar_iot/store_products {
+      allow read: if true;
+      allow write: if isOwnerAdmin();
+    }
+
+    // Solar telemetry document (node_01) and security_system document:
+    // Device/ESP32 writes sensor data and security alerts, and operators trigger cleaning/servo commands
     match /solar_iot/{deviceId} {
       allow read: if true;
       allow write: if true;
@@ -46,6 +66,12 @@ service cloud.firestore {
 
     // Historical telemetry logs (time series)
     match /solar_iot/{deviceId}/history/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Security system camera telemetry, alerts, and motion events
+    match /security_system/{document=**} {
       allow read: if true;
       allow write: if true;
     }
@@ -58,7 +84,22 @@ service cloud.firestore {
 
     // User settings & custom calculation saved presets
     match /user_presets/{userId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // User profile: Weather location (State, District, Area) & ESP32 login connection data
+    match /user_profiles/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Community & User Reviews (open for anyone to submit reviews):
+    match /user_reviews/{reviewId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if isOwnerAdmin();
     }
   }
 }

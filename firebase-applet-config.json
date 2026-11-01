@@ -1,12 +1,12 @@
 {
-  "projectId": "red-access-fpthm",
-  "appId": "1:944495493723:web:31ef32f5f9ec81cff9757e",
-  "apiKey": "AIzaSyC0ssSrveip0eJTCvBKOoKDStecyQDVKJs",
-  "authDomain": "red-access-fpthm.firebaseapp.com",
+  "projectId": "solariot-f49f5",
+  "appId": "1:444092455804:web:54387ae775455830e722f9",
+  "apiKey": "AIzaSyBCx7ZWN_0GFqbb1uA0jJXugVOlIWamzPQ",
+  "authDomain": "solariot-f49f5.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-5865fcd2-ed18-48d2-9d05-2e8be65be1d1",
-  "storageBucket": "red-access-fpthm.firebasestorage.app",
-  "messagingSenderId": "944495493723",
+  "storageBucket": "solariot-f49f5.firebasestorage.app",
+  "messagingSenderId": "444092455804",
   "measurementId": "",
-  "oAuthClientId": "944495493723-fisdtvjr8h09lddu5q8sdato8bj8ge1e.apps.googleusercontent.com",
+  "oAuthClientId": "444092455804-bm38m4mk5ahf49ip4phmh51qf71t8b01.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

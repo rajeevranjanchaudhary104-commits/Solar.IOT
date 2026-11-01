@@ -166,58 +166,68 @@ export const CircularGauge: React.FC<CircularGaugeProps> = ({
           )}
         </svg>
 
-        {/* Center Digital Readout */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
+        {/* Center Digital Readout - Safely centered without clipping or hiding words */}
+        <div 
+          className="absolute inset-0 m-auto flex flex-col items-center justify-center text-center pointer-events-none p-1 z-10"
+          style={{ width: `${Math.round(radius * 1.62)}px`, height: `${Math.round(radius * 1.62)}px` }}
+        >
           {icon && (
-            <div className={`mb-0.5 ${isAvailable ? 'opacity-80 group-hover:scale-110' : 'opacity-40'} transition-transform duration-300`}>
+            <div className={`mb-0.5 shrink-0 scale-75 sm:scale-85 ${isAvailable ? 'opacity-90 group-hover:scale-100' : 'opacity-40'} transition-transform duration-300`}>
               {icon}
             </div>
           )}
-          <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400">
+          
+          <div 
+            className="text-[9px] sm:text-[10px] font-mono uppercase tracking-tight text-slate-300 font-bold px-0.5 leading-snug break-words max-w-full" 
+            title={label}
+          >
             {label}
           </div>
 
           <div
-            className={`font-mono font-black tracking-tight transition-all duration-300 flex items-baseline justify-center ${
+            className={`font-mono font-black tracking-tight transition-all duration-300 flex items-baseline justify-center max-w-full px-0.5 my-0.5 ${
               !isAvailable
-                ? 'text-slate-500 text-2xl'
+                ? 'text-slate-400 text-lg sm:text-xl'
                 : isDanger
-                ? 'text-red-500 animate-pulse text-2xl sm:text-3xl drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+                ? 'text-red-500 animate-pulse text-lg sm:text-xl drop-shadow-[0_0_6px_rgba(239,68,68,0.5)]'
                 : isWarning
-                ? 'text-amber-400 text-2xl sm:text-3xl'
-                : 'text-white text-2xl sm:text-3xl'
+                ? 'text-amber-400 text-lg sm:text-xl'
+                : 'text-white text-lg sm:text-xl'
             }`}
           >
             {isAvailable ? (
               <>
-                <span>{value.toFixed(precision)}</span>
-                <span className="text-xs font-mono ml-1 text-slate-400 font-semibold">
+                <span className="tabular-nums">{value.toFixed(precision)}</span>
+                <span className="text-[9px] sm:text-[10px] font-mono ml-0.5 text-slate-300 font-semibold shrink-0">
                   {unit}
                 </span>
               </>
             ) : (
-              <span className="text-xl sm:text-2xl font-bold tracking-widest text-slate-500">
+              <span className="text-base sm:text-lg font-bold tracking-widest text-slate-500">
                 NA
               </span>
             )}
           </div>
 
-          <div className="text-[10px] font-mono text-slate-400 mt-0.5 max-w-[120px] truncate leading-tight">
-            {isAvailable ? (sublabel || `${label} active`) : 'Hardware Offline'}
+          <div 
+            className="text-[8.5px] sm:text-[9.5px] font-mono text-slate-400 px-0.5 leading-tight break-words max-w-full" 
+            title={isAvailable ? (sublabel || `${label} active`) : 'Hardware Offline'}
+          >
+            {isAvailable ? (sublabel || `${label} active`) : 'Offline'}
           </div>
         </div>
       </div>
 
       {/* Min / Max Range & Peak Indicators */}
-      <div className="flex justify-between items-center w-full px-4 -mt-2 text-[10px] font-mono text-slate-500">
+      <div className="flex justify-between items-center w-full px-1.5 mt-1 text-[9px] font-mono text-slate-400">
         <span>{min}{unit}</span>
         {isAvailable && peakValue !== undefined && peakValue !== null && (
-          <span className="text-amber-400/90 bg-amber-400/10 px-1 rounded text-[9px] flex items-center gap-0.5 font-bold" title="Highest Recorded">
+          <span className="text-amber-400 bg-amber-400/10 px-1 py-0.5 rounded text-[8px] flex items-center gap-0.5 font-bold" title="Highest Recorded">
             ▲ {peakValue.toFixed(precision)}{unit}
           </span>
         )}
         {!isAvailable && (
-          <span className="text-slate-600 text-[9px]">Awaiting Signal</span>
+          <span className="text-slate-500 text-[8px]">No Signal</span>
         )}
         <span>{max}{unit}</span>
       </div>

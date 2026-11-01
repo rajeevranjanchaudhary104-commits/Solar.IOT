@@ -1,0 +1,6 @@
+{
+  "summary":  "Comprehensive plan for transitioning all Farm.IOT features to the user's personal Firebase project (farmiotest) across Realtime Database and Cloud Firestore, complete with dynamic account switcher, scoped permanent security rules without expiration, and auto-generated ESP32/Colab connection configs.",
+  "updatedAt":  "2026-10-28T10:16:02.221632955Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

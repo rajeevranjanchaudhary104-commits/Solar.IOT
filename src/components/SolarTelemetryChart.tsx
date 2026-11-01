@@ -9,7 +9,49 @@ import {
   WifiOff,
   Database
 } from 'lucide-react';
-import { TelemetryPoint } from '../types/solar';
+import { TelemetryPoint, TelemetryHistoryPoint } from '../types/solar';
+
+export function buildSparkline(
+  historyPoints: TelemetryHistoryPoint[],
+  width = 800,
+  height = 180
+): { linePath: string; areaPath: string; ceiling: number } {
+  const values = Array.isArray(historyPoints)
+    ? historyPoints.map((p) => Number(p.power) || 0)
+    : [];
+  const ceiling = Math.max(50, Math.ceil(Math.max(...values, 10) * 1.25));
+
+  if (values.length === 0) {
+    return { linePath: '', areaPath: '', ceiling };
+  }
+
+  const divisor = values.length > 1 ? values.length - 1 : 1;
+  const coords = values.map((v, i) => ({
+    x: (i / divisor) * width,
+    y: height - (Math.min(v, ceiling) / ceiling) * height,
+  }));
+
+  if (coords.length === 1) {
+    return {
+      linePath: `M ${coords[0].x} ${coords[0].y}`,
+      areaPath: `M ${coords[0].x} ${coords[0].y} L ${coords[0].x} ${height} Z`,
+      ceiling,
+    };
+  }
+
+  let linePath = `M ${coords[0].x} ${coords[0].y}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i];
+    const p1 = coords[i + 1];
+    const cp1x = p0.x + (p1.x - p0.x) / 2;
+    const cp1y = p0.y;
+    const cp2x = p0.x + (p1.x - p0.x) / 2;
+    const cp2y = p1.y;
+    linePath += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p1.x} ${p1.y}`;
+  }
+  const areaPath = `${linePath} L ${coords[coords.length - 1].x} ${height} L ${coords[0].x} ${height} Z`;
+  return { linePath, areaPath, ceiling };
+}
 
 interface SolarTelemetryChartProps {
   data: TelemetryPoint[];
@@ -43,27 +85,43 @@ export const SolarTelemetryChart: React.FC<SolarTelemetryChartProps> = ({
   const chartWidth = svgWidth - paddingLeft - paddingRight;
   const chartHeight = svgHeight - paddingTop - paddingBottom;
 
+  const hasData = Array.isArray(data) && data.length > 0;
+  const values = hasData
+    ? data.map((d) =>
+        activeMetric === 'power'
+          ? Number(d.power) || 0
+          : activeMetric === 'voltage'
+          ? Number(d.voltage) || 0
+          : activeMetric === 'current'
+          ? Number(d.current) || 0
+          : Number(d.temperature) || 0
+      )
+    : [];
+
+  // Dynamic ceiling from dataset to prevent clipping above 40W
+  const dynamicPowerCeiling = Math.max(50, Math.ceil(Math.max(...(hasData ? data.map((d) => Number(d.power) || 0) : [0]), 10) * 1.25));
+
   // Value boundaries
-  let metricMax = 120;
+  let metricMax = dynamicPowerCeiling;
   let metricUnit = 'W';
   let metricColor = '#f59e0b'; // amber
   let gradientFrom = '#fbbf24';
   let gradientTo = '#d97706';
 
   if (activeMetric === 'voltage') {
-    metricMax = 24;
+    metricMax = Math.max(24, Math.ceil(Math.max(...values, 10) * 1.25));
     metricUnit = 'V';
     metricColor = '#38bdf8'; // sky
     gradientFrom = '#38bdf8';
     gradientTo = '#0284c7';
   } else if (activeMetric === 'current') {
-    metricMax = 7;
+    metricMax = Math.max(7, Math.ceil(Math.max(...values, 2) * 1.25));
     metricUnit = 'A';
     metricColor = '#10b981'; // emerald
     gradientFrom = '#34d399';
     gradientTo = '#059669';
   } else if (activeMetric === 'temperature') {
-    metricMax = 60;
+    metricMax = Math.max(60, Math.ceil(Math.max(...values, 25) * 1.25));
     metricUnit = '°C';
     metricColor = '#f97316'; // orange
     gradientFrom = '#fb923c';
@@ -71,7 +129,6 @@ export const SolarTelemetryChart: React.FC<SolarTelemetryChartProps> = ({
   }
 
   // Calculate points from real telemetry data in Firebase
-  const hasData = Array.isArray(data) && data.length > 0;
   const points = hasData ? data.map((d, index) => {
     const val = activeMetric === 'power' ? d.power :
                 activeMetric === 'voltage' ? d.voltage :
@@ -269,10 +326,10 @@ export const SolarTelemetryChart: React.FC<SolarTelemetryChartProps> = ({
       </div>
 
       {/* SVG Line / Area Graph */}
-      <div className="relative mt-2 rounded-xl bg-slate-950/80 border border-slate-800/80 p-2 sm:p-4 overflow-x-auto">
+      <div className="relative mt-2 rounded-xl bg-slate-950/80 border border-slate-800/80 p-2 sm:p-4 overflow-x-auto w-full max-w-full scrollbar-none">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          className="w-full h-auto min-w-[500px] sm:min-w-full overflow-visible select-none"
+          className="w-full h-auto min-w-[400px] sm:min-w-full max-w-none sm:max-w-full overflow-hidden select-none"
         >
           <defs>
             <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">

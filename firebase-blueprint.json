@@ -21,6 +21,23 @@
         "updatedAt": { "type": "string", "description": "ISO timestamp of last telemetry ingestion" }
       }
     },
+    "WindmillPeltierNode": {
+      "title": "WindmillPeltierNode",
+      "description": "Real-time telemetry for Windmill turbine and Peltier thermoelectric generator with sand and environmental sensors",
+      "type": "object",
+      "properties": {
+        "peltierCurrent": { "type": "number", "description": "Peltier module current in Amperes" },
+        "peltierVoltage": { "type": "number", "description": "Peltier module voltage in Volts" },
+        "peltierPower": { "type": "number", "description": "Peltier generated power in Watts" },
+        "sandTemp": { "type": "number", "description": "Sand thermal reservoir temperature in Celsius" },
+        "peltierTemp": { "type": "number", "description": "Peltier junction temperature in Celsius" },
+        "environmentTemp": { "type": "number", "description": "Environmental ambient temperature in Celsius" },
+        "windmillRpm": { "type": "number", "description": "Windmill rotor angular velocity in RPM" },
+        "electricityGenerated": { "type": "number", "description": "Windmill output power in Watts" },
+        "airPressure": { "type": "number", "description": "Atmospheric barometric pressure in hPa" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of last reading" }
+      }
+    },
     "AboutSectionContent": {
       "title": "AboutSectionContent",
       "description": "Editable about section content containing 2 photo slots, 1 video section, and a 300-word engineering summary",
@@ -61,7 +78,7 @@
     },
     "HardwareConfig": {
       "title": "HardwareConfig",
-      "description": "Customizable firmware code, pin layout, and sensor specifications editable by owner",
+      "description": "Customizable firmware code, pin layout, devices, sensors, and wire connections editable by owner",
       "type": "object",
       "properties": {
         "firmwareCode": { "type": "string" },
@@ -73,6 +90,7 @@
         "pinPumpRelay": { "type": "string" },
         "microcontrollerType": { "type": "string" },
         "sensorCalibrationNotes": { "type": "string" },
+        "devices": { "type": "array", "description": "Custom devices, sensors, and wire connections added by user" },
         "updatedAt": { "type": "string" }
       }
     },
@@ -82,6 +100,78 @@
       "type": "object",
       "properties": {
         "slots": { "type": "array", "description": "List of 20 customizable title/value slots" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Saved user preferences including weather location (State, District, Area, GPS) and ESP32 login connection data linked to Google Account",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "state": { "type": "string", "description": "Saved State / Province" },
+        "district": { "type": "string", "description": "Saved District / City" },
+        "area": { "type": "string", "description": "Saved Area / Locality / Solar Site" },
+        "latitude": { "type": "number", "description": "Selected location latitude" },
+        "longitude": { "type": "number", "description": "Selected location longitude" },
+        "espNodeId": { "type": "string", "description": "ESP32 Node identifier (e.g. node_01)" },
+        "espWifiSsid": { "type": "string", "description": "Saved Wi-Fi network SSID" },
+        "espAuthToken": { "type": "string", "description": "ESP32 hardware station API token" },
+        "espStationName": { "type": "string", "description": "Friendly name of the solar station" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "UserReview": {
+      "title": "UserReview",
+      "description": "Community user reviews with attached photos, YouTube demonstration videos, ratings, and AI key takeaways",
+      "type": "object",
+      "properties": {
+        "authorName": { "type": "string" },
+        "authorRole": { "type": "string" },
+        "authorEmail": { "type": "string" },
+        "rating": { "type": "number" },
+        "setupType": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "photoTitle": { "type": "string" },
+        "photos": { "type": "array" },
+        "videoUrl": { "type": "string" },
+        "videoTitle": { "type": "string" },
+        "verifiedReal": { "type": "boolean" },
+        "helpfulCount": { "type": "number" },
+        "timestamp": { "type": "string" },
+        "ownerReply": { "type": "string" },
+        "ownerReplyTime": { "type": "string" },
+        "aiKeyTakeaway": { "type": "string" },
+        "aiSentiment": { "type": "string" },
+        "aiKeywords": { "type": "array" }
+      }
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Configurable solar hardware store branding, WhatsApp order number, currency, taxes, and promo discounts",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string" },
+        "storeTagline": { "type": "string" },
+        "storeDescription": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "upiId": { "type": "string" },
+        "defaultCurrency": { "type": "string" },
+        "usdExchangeRate": { "type": "number" },
+        "gstTaxRatePercent": { "type": "number" },
+        "gstTaxIncluded": { "type": "boolean" },
+        "shippingNotice": { "type": "string" },
+        "announcementEnabled": { "type": "boolean" },
+        "announcementText": { "type": "string" },
+        "announcementBadge": { "type": "string" },
+        "promoCode": { "type": "string" },
+        "promoDiscountPercent": { "type": "number" },
         "updatedAt": { "type": "string" }
       }
     }
@@ -106,6 +196,18 @@
     "/solar_iot/custom_slots": {
       "schema": "CustomSlots",
       "description": "20 custom slots for editing any custom parameter, metric, or note"
+    },
+    "/solar_iot/store_settings": {
+      "schema": "StoreSettings",
+      "description": "Customizable solar store branding, WhatsApp order routing, promo discounts and GST tax settings"
+    },
+    "/user_profiles/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user weather location (State, District, Area) and ESP32 login connection data for Google authenticated users"
+    },
+    "/user_reviews/{reviewId}": {
+      "schema": "UserReview",
+      "description": "Public user and community reviews with attached photos and YouTube video demonstrations"
     }
   }
 }
