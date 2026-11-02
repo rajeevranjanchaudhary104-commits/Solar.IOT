@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SolarIOT" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/solar_accent</item>
+        <item name="colorPrimaryDark">@color/solar_dark</item>
+        <item name="colorAccent">@color/solar_amber</item>
+        <item name="android:statusBarColor">@color/solar_dark</item>
+        <item name="android:navigationBarColor">@color/solar_dark</item>
+    </style>
+
+    <style name="Theme.SolarIOT.Fullscreen" parent="Theme.SolarIOT">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+    </style>
+</resources>

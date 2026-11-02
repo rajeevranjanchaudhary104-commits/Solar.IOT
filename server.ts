@@ -379,6 +379,25 @@ app.get(['/api/download/deploy-bundle', '/download/solariot_deploy_bundle.zip', 
   }
 });
 
+// Direct Download Endpoint for Android Studio Project Source (.zip)
+app.get(['/api/download/android-source', '/solar_iot_android_source.zip'], (req, res) => {
+  const possiblePaths = [
+    path.resolve(__dirname, 'public/solar_iot_android_source.zip'),
+    path.resolve(__dirname, 'dist/solar_iot_android_source.zip'),
+    path.resolve(__dirname, 'solar_iot_android_source.zip'),
+  ];
+  
+  let targetPath = possiblePaths.find(p => fs.existsSync(p));
+
+  if (targetPath) {
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="solar_iot_android_source.zip"');
+    res.sendFile(targetPath);
+  } else {
+    res.status(404).json({ error: 'Android source bundle zip not found' });
+  }
+});
+
 // Server initialization: Mount Vite dev middleware in development or serve static assets in production
 async function startServer() {
   // Determine production mode: either explicit NODE_ENV=production or running compiled js from dist

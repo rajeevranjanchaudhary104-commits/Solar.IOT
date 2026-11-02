@@ -214,10 +214,89 @@ export const db = (firebaseConfigJson as any).firestoreDatabaseId
   ? getFirestore(app, (firebaseConfigJson as any).firestoreDatabaseId)
   : getFirestore(app);
 
-// Validate connection to Firestore on boot
+// Validate connection to Firestore on boot and purge any lingering static demo/seeded ratings
 async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'solar_iot', 'node_01'));
+    const nodeRef = doc(db, 'solar_iot', 'node_01');
+    const snap = await getDocFromServer(nodeRef);
+    if (snap.exists()) {
+      const d = snap.data();
+      const isSeededDemo =
+        (Number(d?.voltage) === 18.72 && Number(d?.current) === 3.41) ||
+        (Number(d?.windmillRpm) === 462 && Number(d?.windmillPower) === 38.5) ||
+        (Number(d?.sandTemp) === 46.5 && Number(d?.peltierVoltage) === 4.8) ||
+        (Number(d?.sandTemp) === 45 && Number(d?.airPressure) === 1013.25 && Number(d?.voltage) === 0);
+      if (isSeededDemo) {
+        await setDoc(
+          nodeRef,
+          {
+            espConnected: false,
+            voltage: null,
+            current: null,
+            power: null,
+            temperature: null,
+            humidity: null,
+            batteryPercent: null,
+            highestWattToday: null,
+            highestVoltageToday: null,
+            dailyEnergyWh: null,
+            efficiency: null,
+            soilMoisture: null,
+            soil_moisture: null,
+            soilMoistureRaw: null,
+            soilStatus: null,
+            soilTemperature: null,
+            soil_temperature: null,
+            windmillRpm: null,
+            windmill_rpm: null,
+            windmillPower: null,
+            electricityGenerated: null,
+            windmillVoltage: null,
+            windmillCurrent: null,
+            airPressure: null,
+            peltierCurrent: null,
+            peltierVoltage: null,
+            peltierPower: null,
+            sandTemp: null,
+            peltierTemp: null,
+            environmentTemp: null,
+            updatedAt: new Date(0).toISOString(),
+          },
+          { merge: true }
+        );
+      }
+    }
+    const wpRef = doc(db, 'solar_iot', 'windmill_peltier');
+    const wpSnap = await getDocFromServer(wpRef);
+    if (wpSnap.exists()) {
+      const wd = wpSnap.data();
+      if (
+        (Number(wd?.windmillRpm) === 462 && Number(wd?.windmillPower) === 38.5) ||
+        Number(wd?.sandTemp) === 46.5 ||
+        Number(wd?.sandTemp) === 42
+      ) {
+        await setDoc(
+          wpRef,
+          {
+            espConnected: false,
+            windmillRpm: null,
+            windmillPower: null,
+            electricityGenerated: null,
+            windmillVoltage: null,
+            windmillCurrent: null,
+            airPressure: null,
+            peltierCurrent: null,
+            peltierVoltage: null,
+            peltierPower: null,
+            sandTemp: null,
+            peltierTemp: null,
+            environmentTemp: null,
+            updatedAt: new Date(0).toISOString(),
+          },
+          { merge: true }
+        );
+      }
+    }
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
       console.error('Please check your Firebase configuration.');
@@ -296,6 +375,10 @@ export const SCOPED_RTDB_RULES_JSON = `{
       ".read": true,
       ".write": true,
       ".indexOn": ["updated_at", "updatedAt"]
+    },
+    "telemetry": {
+      ".read": true,
+      ".write": true
     }
   }
 }`;
@@ -368,23 +451,25 @@ export function sanitizeForFirestore<T>(data: T): T {
 }
 
 /**
- * Initializes and seeds a Realtime Database (and Cloud Firestore backup) with complete
- * Live Solar Panel, Soil Moisture, Irrigation, Windmill/Peltier, and Security System nodes.
+ * Initializes Realtime Database and Cloud Firestore nodes in a clean, strictly offline state
+ * (zero fabricated sensor ratings) so the dashboard only displays real hardware readings
+ * when an ESP32 with physical sensors is actively connected.
  */
 export async function seedCompleteRealtimeDatabase(
   targetRtdbUrl?: string,
   overrides?: Record<string, any>
 ): Promise<{ ok: boolean; rtdbOk: boolean; firestoreOk: boolean; status: number; message: string }> {
   const cleanUrl = (targetRtdbUrl || getCustomRtdbUrl()).trim().replace(/\/+$/, '');
-  const nowIso = new Date().toISOString();
-  const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const hasCustomOverrides = Boolean(overrides && Object.keys(overrides).length > 0);
+  const nowIso = hasCustomOverrides ? new Date().toISOString() : new Date(0).toISOString();
 
   const solarAndSoilPayload = {
-    espConnected: false,
+    espConnected: hasCustomOverrides ? true : false,
     voltage: null,
     current: null,
     power: null,
     temperature: null,
+    humidity: null,
     batteryPercent: null,
     highestWattToday: null,
     highestWattTime: null,
@@ -413,6 +498,7 @@ export async function seedCompleteRealtimeDatabase(
     windmillRpm: null,
     windmill_rpm: null,
     windmillPower: null,
+    electricityGenerated: null,
     windmillVoltage: null,
     windmillCurrent: null,
     airPressure: null,
@@ -424,7 +510,7 @@ export async function seedCompleteRealtimeDatabase(
     environmentTemp: null,
     updatedAt: nowIso,
     updated_at: nowIso,
-    timestamp: 0,
+    timestamp: hasCustomOverrides ? Date.now() : 0,
     ...(overrides || {}),
   };
 
@@ -444,6 +530,7 @@ export async function seedCompleteRealtimeDatabase(
   let firestoreOk = false;
   try {
     await setDoc(doc(db, 'solar_iot', 'node_01'), sanitizeForFirestore(solarAndSoilPayload), { merge: true });
+    await setDoc(doc(db, 'solar_iot', 'windmill_peltier'), sanitizeForFirestore(solarAndSoilPayload), { merge: true });
     await setDoc(doc(db, 'solar_iot', 'security_system'), sanitizeForFirestore(securityPayload), { merge: true });
     firestoreOk = true;
   } catch (err) {
@@ -466,6 +553,11 @@ export async function seedCompleteRealtimeDatabase(
       rtdbOk = true;
       await Promise.allSettled([
         fetch(`${cleanUrl}/node_01.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(solarAndSoilPayload),
+        }),
+        fetch(`${cleanUrl}/telemetry.json`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(solarAndSoilPayload),
@@ -494,7 +586,7 @@ export async function seedCompleteRealtimeDatabase(
       rtdbOk: true,
       firestoreOk,
       status: 200,
-      message: `✅ Live Solar Panel, Soil Moisture (54%), Windmill & Security nodes initialized in Realtime Database (${cleanUrl}) & Cloud Firestore!`,
+      message: `✅ Database nodes initialized & cleared in Realtime Database (${cleanUrl}) & Cloud Firestore. Waiting for live ESP32 hardware telemetry!`,
     };
   }
 
@@ -504,7 +596,7 @@ export async function seedCompleteRealtimeDatabase(
       rtdbOk: false,
       firestoreOk,
       status,
-      message: `⚠️ Realtime Database rules are locked (HTTP ${status}). Live Solar & Soil Moisture data is active via Cloud Firestore! Copy and publish the Scoped Rules in your Firebase Console to unlock RTDB.`,
+      message: `⚠️ Realtime Database rules are locked (HTTP ${status}). Cloud Firestore node_01 is initialized & waiting for live ESP32 telemetry!`,
     };
   }
 
@@ -514,7 +606,7 @@ export async function seedCompleteRealtimeDatabase(
       rtdbOk: false,
       firestoreOk,
       status: 404,
-      message: `⚠️ Realtime Database not found at ${cleanUrl} (HTTP 404). Live Solar & Soil Moisture data is active via Cloud Firestore! Create your RTDB in Firebase Console and paste the URL.`,
+      message: `⚠️ Realtime Database not found at ${cleanUrl} (HTTP 404). Cloud Firestore node_01 is initialized & waiting for live ESP32 telemetry!`,
     };
   }
 
@@ -524,7 +616,7 @@ export async function seedCompleteRealtimeDatabase(
     firestoreOk,
     status,
     message: firestoreOk
-      ? `✅ Live Solar & Soil Moisture activated via Cloud Firestore! (RTDB notice: ${errorDetail || `HTTP ${status}`})`
+      ? `✅ Cloud Firestore node_01 reset to clean state & waiting for ESP32! (RTDB notice: ${errorDetail || `HTTP ${status}`})`
       : `❌ Could not reach Realtime Database (${errorDetail || `HTTP ${status}`}). Check your URL and rules.`,
   };
 }

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "node scripts/generate-apk.js && vite build && python3 scripts/create_deploy_bundle.py",
+    "build": "node scripts/generate-apk.js && vite build && python3 scripts/create_deploy_bundle.py && python3 scripts/create_android_zip.py",
     "start": "node server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",

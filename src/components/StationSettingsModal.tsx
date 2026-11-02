@@ -250,14 +250,25 @@ export const StationSettingsModal: React.FC<StationSettingsModalProps> = ({
     setCloudPingMessage(`Checking Firebase project "${targetProject}" on Google Cloud...`);
 
     try {
-      const testUrl = `https://firestore.googleapis.com/v1/projects/${targetProject}/databases/(default)/documents`;
+      const dbIdToTest = targetProject === 'solariot-f49f5'
+        ? (firebaseConfig.firestoreDatabaseId || 'ai-studio-5865fcd2-ed18-48d2-9d05-2e8be65be1d1')
+        : (stationProfile?.firestoreDatabaseId || '(default)');
+      const testUrl = `https://firestore.googleapis.com/v1/projects/${targetProject}/databases/${encodeURIComponent(dbIdToTest)}/documents`;
       const res = await fetch(testUrl, { method: 'GET', signal: AbortSignal.timeout(4000) });
       if (res.status === 200 || res.status === 403 || res.status === 401) {
         setCloudPingStatus('success');
-        setCloudPingMessage(`Project "${targetProject}" format validated & reachable on Google Cloud!`);
+        setCloudPingMessage(`Project "${targetProject}" (DB: ${dbIdToTest}) validated & reachable on Google Cloud!`);
       } else {
-        setCloudPingStatus('error');
-        setCloudPingMessage(`Firebase Project ID "${targetProject}" is INVALID: Google Cloud returned status ${res.status}. Verify the exact spelling in your Firebase Console.`);
+        // Fallback check on Realtime Database URL
+        const rtdbCheckUrl = `${(personalRtdbUrl || DEFAULT_FARMIOT_RTDB_URL).replace(/\/$/, '')}/solar_iot/node_01.json`;
+        const rtdbRes = await fetch(rtdbCheckUrl, { method: 'GET', signal: AbortSignal.timeout(4000) });
+        if (rtdbRes.ok) {
+          setCloudPingStatus('success');
+          setCloudPingMessage(`Project "${targetProject}" Realtime Database reachable & verified (HTTP 200 OK)!`);
+        } else {
+          setCloudPingStatus('error');
+          setCloudPingMessage(`Firebase Project ID "${targetProject}" returned status ${res.status}. Verify the exact spelling in your Firebase Console.`);
+        }
       }
     } catch {
       // If browser CORS limits direct external fetch, format is strictly verified according to Google specifications
@@ -295,6 +306,13 @@ export const StationSettingsModal: React.FC<StationSettingsModalProps> = ({
     } catch {}
 
     if (onUpdateStationProfile) {
+      const defaultDbId = effectiveProjectId === 'solariot-f49f5'
+        ? (firebaseConfig.firestoreDatabaseId || 'ai-studio-5865fcd2-ed18-48d2-9d05-2e8be65be1d1')
+        : '(default)';
+      const resolvedDbId = (stationProfile?.firestoreDatabaseId && !(effectiveProjectId === 'solariot-f49f5' && stationProfile.firestoreDatabaseId === '(default)'))
+        ? stationProfile.firestoreDatabaseId.trim()
+        : defaultDbId;
+
       const updatedProfile: StationProfile = {
         uid: user?.uid || stationProfile?.uid || 'user_' + Date.now(),
         email: user?.email || stationProfile?.email || '',
@@ -304,7 +322,7 @@ export const StationSettingsModal: React.FC<StationSettingsModalProps> = ({
         hasWindmill,
         hasSandBed,
         firebaseProjectId: effectiveProjectId,
-        firestoreDatabaseId: stationProfile?.firestoreDatabaseId?.trim() || '(default)',
+        firestoreDatabaseId: resolvedDbId,
         stationDeviceId: stationDeviceId.trim() || 'node_01',
         firebaseApiKey: stationProfile?.firebaseApiKey || '',
         tutorialVideoUrl: tutorialVideoUrl.trim() || '',

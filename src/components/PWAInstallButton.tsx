@@ -34,12 +34,14 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
 }) => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'apk' | 'pwa' | 'instructions'>('apk');
+  const [activeTab, setActiveTab] = useState<'apk' | 'pwa' | 'instructions' | 'source'>('apk');
   const [downloadStarted, setDownloadStarted] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [copiedCodeKey, setCopiedCodeKey] = useState<string | null>(null);
 
   const apkUrl = '/api/download/apk';
   const apkFileName = 'Farm_IOT_SmartStation_v2.4.apk';
+  const androidSourceUrl = '/api/download/android-source';
 
   const handleDownloadApk = () => {
     setDownloadStarted(true);
@@ -198,44 +200,57 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center p-1 bg-zinc-900/90 rounded-2xl border border-zinc-800 text-xs font-mono">
+            <div className="flex items-center p-1 bg-zinc-900/90 rounded-2xl border border-zinc-800 text-xs font-mono overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab('apk')}
-                className={`flex-1 py-2 rounded-xl transition flex items-center justify-center gap-1.5 font-bold cursor-pointer ${
+                className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center gap-1.5 font-bold cursor-pointer whitespace-nowrap ${
                   activeTab === 'apk'
                     ? 'bg-emerald-500 text-slate-950 shadow-md'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 <ArrowDownToLine className="w-3.5 h-3.5" />
-                <span>Android APK (.apk)</span>
+                <span>Android APK</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('pwa')}
-                className={`flex-1 py-2 rounded-xl transition flex items-center justify-center gap-1.5 font-bold cursor-pointer ${
+                className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center gap-1.5 font-bold cursor-pointer whitespace-nowrap ${
                   activeTab === 'pwa'
                     ? 'bg-cyan-500 text-slate-950 shadow-md'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 <Zap className="w-3.5 h-3.5" />
-                <span>1-Tap PWA (Browser)</span>
+                <span>1-Tap PWA</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('source')}
+                className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center gap-1.5 font-bold cursor-pointer whitespace-nowrap ${
+                  activeTab === 'source'
+                    ? 'bg-amber-400 text-slate-950 shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <FileCode className="w-3.5 h-3.5" />
+                <span>APK Source Project</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('instructions')}
-                className={`flex-1 py-2 rounded-xl transition flex items-center justify-center gap-1.5 font-bold cursor-pointer ${
+                className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center gap-1.5 font-bold cursor-pointer whitespace-nowrap ${
                   activeTab === 'instructions'
                     ? 'bg-indigo-600 text-white shadow-md'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 <HelpCircle className="w-3.5 h-3.5" />
-                <span>How to Install</span>
+                <span>Install Guide</span>
               </button>
             </div>
 
@@ -387,6 +402,63 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Tab 4: Android Studio Source Project & Auto-Updating Architecture */}
+            {activeTab === 'source' && (
+              <div className="space-y-4 animate-fadeIn text-xs">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-950/40 via-zinc-900 to-zinc-950 border border-amber-500/40 space-y-3 shadow-lg">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="text-xs font-bold text-white flex items-center gap-2">
+                        <FileCode className="w-4 h-4 text-amber-400" />
+                        <span>Android Studio Project Source Package</span>
+                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono">
+                          Kotlin + Gradle
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
+                        Full native Android Studio project files (<code className="text-amber-300 font-mono">MainActivity.kt</code>, <code className="text-amber-300 font-mono">AndroidManifest.xml</code>, Gradle builds).
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <a
+                      href={androidSourceUrl}
+                      download="solar_iot_android_source.zip"
+                      className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs font-mono flex items-center justify-center gap-2 shadow-lg transition cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-slate-950" />
+                      <span>Download Android Source (.ZIP)</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Real-Time Auto-Updating Magic */}
+                <div className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 space-y-2">
+                  <div className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Real-Time Auto-Updating (Videos, Images & Code)</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-300 font-sans leading-relaxed">
+                    The Android app's <code className="text-emerald-300 font-mono">MainActivity.kt</code> connects dynamically to your live cloud endpoint. <strong>Whenever you update videos, photos, sensor readings, or station code on the website, the Android app updates in real time automatically</strong> without needing to compile a new APK every time!
+                  </p>
+                </div>
+
+                {/* 3-Step Build Guide */}
+                <div className="p-3.5 rounded-2xl bg-black border border-zinc-800 space-y-2">
+                  <div className="text-[11px] font-bold text-white uppercase tracking-wider font-mono">
+                    How to Build APK in Android Studio:
+                  </div>
+                  <ol className="text-zinc-300 space-y-1 list-decimal list-inside pl-1 text-[11px]">
+                    <li>Download and extract <code className="text-amber-300 font-mono">solar_iot_android_source.zip</code>.</li>
+                    <li>Open <strong>Android Studio</strong> and select <strong>File &gt; Open</strong> (select the extracted <code className="text-cyan-300 font-mono">android</code> folder).</li>
+                    <li>Click <strong>Build &gt; Build Bundle(s) / APK(s) &gt; Build APK(s)</strong>.</li>
+                    <li>Android Studio will generate your signed release APK in seconds!</li>
+                  </ol>
+                </div>
               </div>
             )}
 

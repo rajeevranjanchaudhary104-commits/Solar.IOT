@@ -308,7 +308,7 @@ export default function App() {
             current: i,
             power: p,
             temperature: data.temperature !== undefined ? Number(data.temperature) : (data.tempC !== undefined ? Number(data.tempC) : prev.temperature),
-            batteryPercent: data.batteryPercent !== undefined ? Number(data.batteryPercent) : 85,
+            batteryPercent: data.batteryPercent !== undefined && data.batteryPercent !== null ? Number(data.batteryPercent) : null,
             highestWattToday: data.highestWattToday !== undefined ? Number(data.highestWattToday) : (p && p > (prev.highestWattToday || 0) ? p : prev.highestWattToday),
             isRaining: data.isRaining !== undefined ? Boolean(data.isRaining) : false,
             wiperActive: Boolean(data.wiperActive),
@@ -341,8 +341,52 @@ export default function App() {
     };
   }, [connectionMode, localApIp]);
 
-  const initialTelemetrySignatureRef = useRef<string | null>(null);
   const lastHardwarePacketTimeRef = useRef<number>(0);
+  const lastSeenUpdatedAtRef = useRef<string | null>(null);
+  const hasVerifiedLivePacketChangeRef = useRef<boolean>(false);
+
+  // Hardware Watchdog: if no new telemetry packet arrives for 18 seconds in Firebase mode, mark offline and clear sensor ratings
+  useEffect(() => {
+    const watchdog = setInterval(() => {
+      if (connectionMode === 'firebase') {
+        const lastPacket = lastHardwarePacketTimeRef.current;
+        if (lastPacket === 0 || Date.now() - lastPacket > 18000) {
+          setSolarData((prev) => {
+            if (!prev.espConnected && prev.voltage === null && prev.windmillRpm === null && prev.peltierPower === null) {
+              return prev;
+            }
+            return {
+              ...prev,
+              espConnected: false,
+              voltage: null,
+              current: null,
+              power: null,
+              temperature: null,
+              batteryPercent: null,
+              dailyEnergyWh: null,
+              efficiency: null,
+              soilMoisture: null,
+              soilMoistureRaw: null,
+              soilStatus: null,
+              soilTemperature: null,
+              windmillRpm: null,
+              windmillPower: null,
+              windmillVoltage: null,
+              windmillCurrent: null,
+              peltierCurrent: null,
+              peltierVoltage: null,
+              peltierPower: null,
+              sandTemp: null,
+              peltierTemp: null,
+              environmentTemp: null,
+              airPressure: null,
+            };
+          });
+        }
+      }
+    }, 4000);
+    return () => clearInterval(watchdog);
+  }, [connectionMode]);
 
   // Soft Refresh Handler: triggers a clean check without fabricating sensor readings
   const handleSoftRefresh = () => {
@@ -351,40 +395,15 @@ export default function App() {
     setLastUpdated(new Date());
   };
 
-  // Hardware Watchdog: Marks ESP32 offline if no new telemetry arrives within 30 seconds
-  useEffect(() => {
-    const watchdog = setInterval(() => {
-      if (connectionMode === 'firebase' && lastHardwarePacketTimeRef.current > 0) {
-        if (Date.now() - lastHardwarePacketTimeRef.current > 30000) {
-          lastHardwarePacketTimeRef.current = 0;
-          setSolarData((prev) => ({
-            ...prev,
-            espConnected: false,
-            voltage: null,
-            current: null,
-            power: null,
-            temperature: null,
-            soilMoisture: null,
-            soilMoistureRaw: null,
-            soilStatus: null,
-            soilTemperature: null,
-            windmillRpm: null,
-            windmillPower: null,
-            windmillVoltage: null,
-            windmillCurrent: null,
-            peltierCurrent: null,
-            peltierVoltage: null,
-            peltierPower: null,
-            sandTemp: null,
-            peltierTemp: null,
-            environmentTemp: null,
-            airPressure: null,
-          }));
-        }
-      }
-    }, 5000);
-    return () => clearInterval(watchdog);
-  }, [connectionMode]);
+  // Helper to resolve the active Firestore Database ID for solariot-f49f5
+  const resolveValidDatabaseId = (candidate?: string | null, projId?: string | null) => {
+    const cleanProj = (projId || firebaseConfig.projectId || 'solariot-f49f5').trim();
+    const cleanDb = (candidate || '').trim();
+    if (cleanProj === 'solariot-f49f5' && (!cleanDb || cleanDb === '(default)')) {
+      return firebaseConfig.firestoreDatabaseId || 'ai-studio-5865fcd2-ed18-48d2-9d05-2e8be65be1d1';
+    }
+    return cleanDb || firebaseConfig.firestoreDatabaseId || '(default)';
+  };
 
   // Monitor Firebase Auth state and load Station Profile
   useEffect(() => {
@@ -405,12 +424,13 @@ export default function App() {
           const snap = await getDoc(userDocRef);
           if (snap.exists()) {
             const prof = snap.data() as StationProfile;
-            const validDbId = prof.firestoreDatabaseId?.trim() || '(default)';
+            const resolvedProj = (!prof.firebaseProjectId || prof.firebaseProjectId === 'farmiotest') ? 'solariot-f49f5' : prof.firebaseProjectId;
+            const validDbId = resolveValidDatabaseId(prof.firestoreDatabaseId, resolvedProj);
             const sanitizedProf = { 
               ...prof, 
               displayName: cleanPersonalName(prof.displayName),
               firestoreDatabaseId: validDbId, 
-              firebaseProjectId: (!prof.firebaseProjectId || prof.firebaseProjectId === 'farmiotest') ? 'solariot-f49f5' : prof.firebaseProjectId 
+              firebaseProjectId: resolvedProj
             };
             setStationProfile(sanitizedProf);
           } else {
@@ -418,12 +438,13 @@ export default function App() {
             if (localProf) {
               try {
                 const parsed = JSON.parse(localProf);
-                const validDbId = parsed.firestoreDatabaseId?.trim() || '(default)';
+                const resolvedProj = (!parsed.firebaseProjectId || parsed.firebaseProjectId === 'farmiotest') ? 'solariot-f49f5' : parsed.firebaseProjectId;
+                const validDbId = resolveValidDatabaseId(parsed.firestoreDatabaseId, resolvedProj);
                 const sanitized = { 
                   ...parsed, 
                   displayName: cleanPersonalName(parsed.displayName),
                   firestoreDatabaseId: validDbId, 
-                  firebaseProjectId: (!parsed.firebaseProjectId || parsed.firebaseProjectId === 'farmiotest') ? 'solariot-f49f5' : parsed.firebaseProjectId 
+                  firebaseProjectId: resolvedProj
                 };
                 setStationProfile(sanitized);
               } catch {}
@@ -443,7 +464,13 @@ export default function App() {
             const activeProf = localStorage.getItem('solar_iot_active_profile') || localStorage.getItem(`station_profile_${parsed.uid}`);
             if (activeProf) {
               const parsedProf = JSON.parse(activeProf);
-              setStationProfile({ ...parsedProf, displayName: cleanPersonalName(parsedProf.displayName) });
+              const resolvedProj = (!parsedProf.firebaseProjectId || parsedProf.firebaseProjectId === 'farmiotest') ? 'solariot-f49f5' : parsedProf.firebaseProjectId;
+              setStationProfile({
+                ...parsedProf,
+                displayName: cleanPersonalName(parsedProf.displayName),
+                firebaseProjectId: resolvedProj,
+                firestoreDatabaseId: resolveValidDatabaseId(parsedProf.firestoreDatabaseId, resolvedProj),
+              });
             }
           } else {
             setUser(null);
@@ -502,6 +529,52 @@ export default function App() {
     const rawSoilTemp = getVal('soilTemperature', 'soil_temperature', 'soil_temp');
     const rawIrrigationPump = getVal('irrigationPumpActive', 'irrigation_pump', 'pump_active');
 
+    // Reject known static seeded demo values or unconnected sensor fallback signatures
+    const isSeededOrFakeFallback =
+      (Number(rawVoltage) === 18.72 && Number(rawCurrent) === 3.41) ||
+      (Number(rawWindmillRpm) === 462 && Number(rawWindmillPower) === 38.5) ||
+      (Number(rawSandTemp) === 46.5 && Number(rawPeltierVoltage) === 4.8) ||
+      (Number(rawSandTemp) === 45 && Number(rawAirPressure) === 1013.25 && Number(rawVoltage) === 0);
+
+    // Check whether updatedAt is genuinely fresh (< 20s old) or actively changing across snapshots
+    const updatedAtStr = rawUpdatedAt !== undefined && rawUpdatedAt !== null ? String(rawUpdatedAt).trim() : '';
+    let isFreshWallClock = false;
+    if (updatedAtStr) {
+      const asNum = Number(updatedAtStr);
+      let epochMs = 0;
+      if (!isNaN(asNum) && asNum > 1600000000000) {
+        epochMs = asNum;
+      } else if (!isNaN(asNum) && asNum > 1600000000) {
+        epochMs = asNum * 1000;
+      } else if (updatedAtStr.includes('-') || updatedAtStr.includes('T')) {
+        const parsed = Date.parse(updatedAtStr);
+        if (!isNaN(parsed) && parsed > 1600000000000) {
+          epochMs = parsed;
+        }
+      }
+      if (epochMs > 0 && Math.abs(Date.now() - epochMs) < 20000) {
+        isFreshWallClock = true;
+      }
+    }
+
+    if (updatedAtStr) {
+      if (lastSeenUpdatedAtRef.current === null) {
+        lastSeenUpdatedAtRef.current = updatedAtStr;
+      } else if (lastSeenUpdatedAtRef.current !== updatedAtStr) {
+        lastSeenUpdatedAtRef.current = updatedAtStr;
+        hasVerifiedLivePacketChangeRef.current = true;
+        lastHardwarePacketTimeRef.current = Date.now();
+      }
+    }
+
+    if (isFreshWallClock) {
+      lastHardwarePacketTimeRef.current = Date.now();
+    }
+
+    const isActivelyStreaming =
+      isFreshWallClock ||
+      (hasVerifiedLivePacketChangeRef.current && Date.now() - lastHardwarePacketTimeRef.current < 18000);
+
     const hasValidTelemetry = (
       (rawVoltage !== undefined && rawVoltage !== null && Number(rawVoltage) >= 0) ||
       (rawWindmillRpm !== undefined && rawWindmillRpm !== null) ||
@@ -510,23 +583,11 @@ export default function App() {
       (rawSoilMoisture !== undefined && rawSoilMoisture !== null)
     );
 
-    // Build packet signature to detect genuinely advancing real-time transmissions vs static pre-mount DB snapshots
-    const packetSignature = `${rawUpdatedAt ?? ''}_${rawVoltage ?? ''}_${rawCurrent ?? ''}_${rawSoilMoisture ?? ''}_${rawWindmillRpm ?? ''}`;
-    if (initialTelemetrySignatureRef.current === null) {
-      initialTelemetrySignatureRef.current = packetSignature;
-    }
-    const isAdvancingPacket = packetSignature !== initialTelemetrySignatureRef.current;
-    if (isAdvancingPacket && rawEspConnected === true && hasValidTelemetry) {
-      initialTelemetrySignatureRef.current = packetSignature;
-      lastHardwarePacketTimeRef.current = Date.now();
-    }
-
-    // Node is only live if hardware explicitly reports espConnected === true AND is actively transmitting new packets
     const isHardwareLive = Boolean(
+      !isSeededOrFakeFallback &&
       rawEspConnected === true &&
       hasValidTelemetry &&
-      lastHardwarePacketTimeRef.current > 0 &&
-      (Date.now() - lastHardwarePacketTimeRef.current < 30000)
+      isActivelyStreaming
     );
 
     if (!isHardwareLive) {
@@ -577,7 +638,7 @@ export default function App() {
     const i = rawCurrent !== undefined && rawCurrent !== null ? Number(rawCurrent) : null;
     const p = (v !== null && i !== null)
       ? (rawPower !== undefined && rawPower !== null && Number(rawPower) !== 145.4 ? Number(rawPower) : parseFloat((v * i).toFixed(1)))
-      : null;
+      : (rawPower !== undefined && rawPower !== null ? Number(rawPower) : null);
     const rawPeak = (data.highestWattToday !== undefined && data.highestWattToday !== null && Number(data.highestWattToday) !== 145.4)
       ? Number(data.highestWattToday)
       : null;
@@ -620,9 +681,9 @@ export default function App() {
       return {
         ...prev,
         espConnected: true,
-        voltage: v,
-        current: i,
-        power: p,
+        voltage: v ?? prev.voltage,
+        current: i ?? prev.current,
+        power: p ?? prev.power,
         temperature: rawTemp !== undefined && rawTemp !== null ? Number(rawTemp) : prev.temperature,
         batteryPercent: rawBattery !== undefined && rawBattery !== null ? Number(rawBattery) : prev.batteryPercent,
         highestWattToday: peak ?? prev.highestWattToday,
@@ -668,7 +729,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Listen to Realtime Database for NodeMCU / ESP32 (/solar_iot/node_01 and /node_01) + HTTP REST Polling
+  // 2. Listen to Realtime Database for NodeMCU / ESP32 (/solar_iot/node_01, /node_01, and /telemetry) + HTTP REST Polling
   const [currentRtdbUrl, setCurrentRtdbUrl] = useState<string>(() => getCustomRtdbUrl());
 
   useEffect(() => {
@@ -686,6 +747,7 @@ export default function App() {
     const cleanBaseUrl = currentRtdbUrl.trim().replace(/\/+$/, '');
     let unsub1: (() => void) | null = null;
     let unsub2: (() => void) | null = null;
+    let unsub3: (() => void) | null = null;
 
     if (activeRtdb) {
       try {
@@ -710,30 +772,48 @@ export default function App() {
             }
           }
         }, () => {});
+
+        // Path 3: Root /telemetry (used by standalone ESP32 telemetry sketches)
+        const telemetryRef = ref(activeRtdb, 'telemetry');
+        unsub3 = onValue(telemetryRef, (snap) => {
+          if (snap.exists()) {
+            const val = snap.val();
+            if (val && typeof val === 'object') {
+              processIncomingTelemetry(val);
+            }
+          }
+        }, () => {});
       } catch (err) {
         console.warn('RTDB telemetry listener note:', err);
       }
     }
 
-    // Direct HTTP REST Polling fallback every 4s for Realtime Database (/solar_iot/node_01.json)
+    // Direct HTTP REST Polling fallback every 4s for Realtime Database (/solar_iot/node_01.json, /node_01.json, /telemetry.json)
     let isMounted = true;
     const pollRtdbTelemetry = async () => {
       try {
         const res = await fetch(`${cleanBaseUrl}/solar_iot/node_01.json`);
         if (res.ok) {
           const data = await res.json();
-          if (isMounted && data && typeof data === 'object') {
+          if (isMounted && data && typeof data === 'object' && (data.voltage !== null || data.espConnected === true)) {
             processIncomingTelemetry(data);
             return;
-          } else if (isMounted && data === null) {
-            const rootRes = await fetch(`${cleanBaseUrl}/node_01.json`);
-            if (rootRes.ok) {
-              const rootData = await rootRes.json();
-              if (isMounted && rootData && typeof rootData === 'object') {
-                processIncomingTelemetry(rootData);
-                return;
-              }
-            }
+          }
+        }
+        const rootRes = await fetch(`${cleanBaseUrl}/node_01.json`);
+        if (rootRes.ok) {
+          const rootData = await rootRes.json();
+          if (isMounted && rootData && typeof rootData === 'object' && (rootData.voltage !== null || rootData.espConnected === true)) {
+            processIncomingTelemetry(rootData);
+            return;
+          }
+        }
+        const telRes = await fetch(`${cleanBaseUrl}/telemetry.json`);
+        if (telRes.ok) {
+          const telData = await telRes.json();
+          if (isMounted && telData && typeof telData === 'object' && (telData.voltage !== null || telData.espConnected === true)) {
+            processIncomingTelemetry(telData);
+            return;
           }
         }
       } catch {
@@ -749,6 +829,7 @@ export default function App() {
       clearInterval(pollTimer);
       if (unsub1) unsub1();
       if (unsub2) unsub2();
+      if (unsub3) unsub3();
     };
   }, [currentRtdbUrl]);
 
@@ -819,7 +900,7 @@ export default function App() {
       hasWindmill: true,
       hasSandBed: true,
       firebaseProjectId: 'solariot-f49f5',
-      firestoreDatabaseId: '(default)',
+      firestoreDatabaseId: firebaseConfig.firestoreDatabaseId || 'ai-studio-5865fcd2-ed18-48d2-9d05-2e8be65be1d1',
       stationDeviceId: 'node_01',
       tutorialVideoUrl: '',
       onboardingCompleted: true,
@@ -1375,8 +1456,8 @@ export default function App() {
               onOpenSettings={() => setShowSettingsModal(true)}
             />
 
-            {/* Android APK Download & Mobile PWA App Button (Desktop/Tablet) */}
-            <div className="hidden sm:block shrink-0">
+            {/* Android APK Download & Mobile PWA App Button */}
+            <div className="shrink-0">
               <PWAInstallButton 
                 variant="nav" 
                 userEmail={user?.email} 

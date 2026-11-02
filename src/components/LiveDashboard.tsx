@@ -186,8 +186,8 @@ export const LiveDashboard: React.FC<LiveDashboardProps> = ({
       if (res.rtdbOk || res.firestoreOk) {
         setPingResult({
           text: res.rtdbOk
-            ? `Live Solar Panel (18.6V / 63.6W) & Soil Moisture (54% Optimal) seeded to Realtime Database (${normalized}) and Cloud Firestore!`
-            : `Synced to Cloud Firestore! Note for RTDB (${normalized}): ${res.message}`,
+            ? `Database nodes initialized & reset to clean state in Realtime Database (${normalized}) and Cloud Firestore! Waiting for live ESP32 sensors.`
+            : `Cloud Firestore node_01 reset to clean state! Note for RTDB (${normalized}): ${res.message}`,
           type: res.rtdbOk ? 'success' : 'error'
         });
       } else {
@@ -198,7 +198,7 @@ export const LiveDashboard: React.FC<LiveDashboardProps> = ({
       }
     } catch (e: any) {
       setPingResult({
-        text: `Failed to seed Realtime Database: ${e?.message || 'Unknown error'}`,
+        text: `Failed to initialize Realtime Database: ${e?.message || 'Unknown error'}`,
         type: 'error'
       });
     } finally {
@@ -228,7 +228,7 @@ export const LiveDashboard: React.FC<LiveDashboardProps> = ({
     return { 
       isConnected: false, 
       label: 'Waiting for ESP32', 
-      detail: 'Click "Sync Live Solar & Soil DB" to initialize Realtime Database telemetry' 
+      detail: 'Power on your ESP32 with physical sensors connected to stream live telemetry' 
     };
   };
 
@@ -242,11 +242,11 @@ export const LiveDashboard: React.FC<LiveDashboardProps> = ({
     ? parseFloat((solarData.voltage * solarData.current).toFixed(1))
     : null;
 
-  // Highest Voltage (recorded today or bus peak)
+  // Highest Voltage (strictly from real hardware telemetry, no 21.8V fallback)
   const highestVoltage = (isHardwareConnected && solarData.highestVoltageToday != null)
     ? solarData.highestVoltageToday
     : (isHardwareConnected && solarData.voltage !== null) 
-      ? Math.max(solarData.voltage, 21.8) 
+      ? solarData.voltage 
       : null;
 
   const wattPercentOfPeak = (currentWatt !== null && solarData.highestWattToday && solarData.highestWattToday > 0)

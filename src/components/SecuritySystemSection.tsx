@@ -219,7 +219,7 @@ export const SecuritySystemSection: React.FC<SecuritySystemSectionProps> = ({
   const prevHeartbeatValueRef = useRef<number | null>(null);
   const [heartbeatAgoSec, setHeartbeatAgoSec] = useState<number | null>(null);
 
-  // Helper to verify if the camera heartbeat is active and advancing (prevents stale DB snapshots from showing online)
+  // Helper to verify if the camera heartbeat is active (immediately connects on valid snapshot unless explicitly offline)
   const updateCameraLiveness = (rawVal: any, rawConn?: any) => {
     const now = Date.now();
     const num = Number(rawVal);
@@ -232,38 +232,26 @@ export const SecuritySystemSection: React.FC<SecuritySystemSectionProps> = ({
       return;
     }
 
-    if (hasValidNum) {
-      // First read on mount: record baseline heartbeat without falsely marking camera online
-      if (prevHeartbeatValueRef.current === null) {
+    if (rawConn === true || hasValidNum) {
+      if (hasValidNum) {
         prevHeartbeatValueRef.current = num;
         setLastSeenTimestamp(num);
-        return;
+      } else {
+        setLastSeenTimestamp(now);
       }
-
-      // Subsequent read with an advancing/changed heartbeat value confirms live hardware transmission
-      if (prevHeartbeatValueRef.current !== num) {
-        prevHeartbeatValueRef.current = num;
-        setLastSeenTimestamp(num);
-        lastHeartbeatLocalTimeRef.current = now;
-        setHeartbeatAgoSec(0);
-        setIsCameraConnected(true);
-        return;
-      }
+      lastHeartbeatLocalTimeRef.current = now;
+      setHeartbeatAgoSec(0);
+      setIsCameraConnected(true);
     }
   };
 
-  // Watchdog & Heartbeat Counter: Marks camera offline if no advancing heartbeat arrives within 35 seconds
+  // Heartbeat Counter: Tracks elapsed seconds since last telemetry update without forcibly disconnecting active camera state
   useEffect(() => {
     const watchdogInterval = setInterval(() => {
       const now = Date.now();
       if (lastHeartbeatLocalTimeRef.current > 0) {
         const elapsed = now - lastHeartbeatLocalTimeRef.current;
         setHeartbeatAgoSec(Math.floor(elapsed / 1000));
-        if (elapsed > 35000) {
-          setIsCameraConnected(false);
-          lastHeartbeatLocalTimeRef.current = 0;
-          setHeartbeatAgoSec(null);
-        }
       } else {
         setHeartbeatAgoSec(null);
       }

@@ -156,38 +156,70 @@ export const WindmillPeltierSection: React.FC<WindmillPeltierSectionProps> = ({
     }
   }, [isHardwareConnected, solarData]);
 
-  // Listen to Firestore document 'solar_iot/windmill_peltier' for dedicated telemetry
+  // Listen to Firestore document 'solar_iot/windmill_peltier' for dedicated telemetry (strictly fresh & live only)
   useEffect(() => {
+    let lastWpUpdatedAt: string | null = null;
+    let hasChanged = false;
+    let lastChangeTime = 0;
+
     try {
       const docRef = doc(db, 'solar_iot', 'windmill_peltier');
       const unsub = onSnapshot(docRef, (snapshot) => {
         if (snapshot.exists()) {
           const remote = snapshot.data();
           if (remote) {
-            const updatedAtTime = remote.updatedAt ? new Date(remote.updatedAt).getTime() : 0;
-            const isRecent = updatedAtTime > 0 && (Date.now() - updatedAtTime < 30 * 1000);
-            const isLive = Boolean(remote.espConnected === true && isRecent);
+            const getRemoteVal = (...keys: string[]) => {
+              for (const k of keys) {
+                if (remote[k] !== undefined && remote[k] !== null) return remote[k];
+              }
+              return undefined;
+            };
+
+            const rRpm = getRemoteVal('windmillRpm', 'windmill_rpm', 'rpm');
+            const rWatts = getRemoteVal('electricityGenerated', 'windmillPower', 'windmill_power', 'power_generated');
+            const rPeltierAmps = getRemoteVal('peltierCurrent', 'peltier_current');
+            const rPeltierVolts = getRemoteVal('peltierVoltage', 'peltier_voltage');
+            const rPeltierWatts = getRemoteVal('peltierPower', 'peltier_power');
+            const rSandTemp = getRemoteVal('sandTemp', 'sand_temp');
+            const rPeltierTemp = getRemoteVal('peltierTemp', 'peltier_temp');
+            const rEnvTemp = getRemoteVal('environmentTemp', 'environment_temp', 'env_temp');
+            const rWindVoltage = getRemoteVal('windmillVoltage', 'windmill_voltage');
+            const rWindCurrent = getRemoteVal('windmillCurrent', 'windmill_current');
+            const rPressure = getRemoteVal('airPressure', 'air_pressure', 'pressure');
+
+            const isSeededOrFake =
+              (Number(rRpm) === 462 && Number(rWatts) === 38.5) ||
+              Number(rSandTemp) === 46.5 ||
+              (Number(rSandTemp) === 45 && Number(rPressure) === 1013.25) ||
+              (Number(rSandTemp) === 42 && Number(rPressure) === 1013.25);
+
+            const rawUpdatedStr = remote.updatedAt ? String(remote.updatedAt).trim() : '';
+            let isFreshClock = false;
+            if (rawUpdatedStr && (rawUpdatedStr.includes('-') || rawUpdatedStr.includes('T'))) {
+              const parsed = Date.parse(rawUpdatedStr);
+              if (!isNaN(parsed) && parsed > 1600000000000 && Math.abs(Date.now() - parsed) < 20000) {
+                isFreshClock = true;
+              }
+            }
+            if (rawUpdatedStr) {
+              if (lastWpUpdatedAt === null) {
+                lastWpUpdatedAt = rawUpdatedStr;
+              } else if (lastWpUpdatedAt !== rawUpdatedStr) {
+                lastWpUpdatedAt = rawUpdatedStr;
+                hasChanged = true;
+                lastChangeTime = Date.now();
+              }
+            }
+
+            const isFreshStream = isFreshClock || (hasChanged && Date.now() - lastChangeTime < 18000);
+            const hasReadings =
+              rRpm !== undefined ||
+              rWatts !== undefined ||
+              rPeltierAmps !== undefined ||
+              rPeltierWatts !== undefined;
+            const isLive = Boolean(!isSeededOrFake && remote.espConnected === true && hasReadings && isFreshStream);
 
             if (isLive) {
-              const getRemoteVal = (...keys: string[]) => {
-                for (const k of keys) {
-                  if (remote[k] !== undefined && remote[k] !== null) return remote[k];
-                }
-                return undefined;
-              };
-
-              const rRpm = getRemoteVal('windmillRpm', 'windmill_rpm', 'rpm');
-              const rWatts = getRemoteVal('electricityGenerated', 'windmillPower', 'windmill_power', 'power_generated');
-              const rPeltierAmps = getRemoteVal('peltierCurrent', 'peltier_current');
-              const rPeltierVolts = getRemoteVal('peltierVoltage', 'peltier_voltage');
-              const rPeltierWatts = getRemoteVal('peltierPower', 'peltier_power');
-              const rSandTemp = getRemoteVal('sandTemp', 'sand_temp');
-              const rPeltierTemp = getRemoteVal('peltierTemp', 'peltier_temp');
-              const rEnvTemp = getRemoteVal('environmentTemp', 'environment_temp', 'env_temp');
-              const rWindVoltage = getRemoteVal('windmillVoltage', 'windmill_voltage');
-              const rWindCurrent = getRemoteVal('windmillCurrent', 'windmill_current');
-              const rPressure = getRemoteVal('airPressure', 'air_pressure', 'pressure');
-
               const newPoint = {
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 rpm: rRpm !== undefined ? Number(rRpm) : 0,
@@ -195,7 +227,7 @@ export const WindmillPeltierSection: React.FC<WindmillPeltierSectionProps> = ({
                 peltierAmps: rPeltierAmps !== undefined ? Number(rPeltierAmps) : 0,
                 sandTemp: rSandTemp !== undefined ? Number(rSandTemp) : 0,
                 envTemp: rEnvTemp !== undefined ? Number(rEnvTemp) : 0,
-                pressure: rPressure !== undefined ? Number(rPressure) : 1013,
+                pressure: rPressure !== undefined ? Number(rPressure) : 0,
               };
 
               setHistoryPoints((prevHist) => [...prevHist.slice(-14), newPoint]);
@@ -217,7 +249,6 @@ export const WindmillPeltierSection: React.FC<WindmillPeltierSectionProps> = ({
                 espConnected: true,
               });
             } else if (!isHardwareConnected) {
-              // Remote document is stale or marked disconnected
               setData((prev) => ({
                 ...prev,
                 espConnected: false,
@@ -250,7 +281,7 @@ export const WindmillPeltierSection: React.FC<WindmillPeltierSectionProps> = ({
   // Comprehensive hardware connection check
   const isStationConnected = Boolean(
     (isHardwareConnected && solarData?.espConnected) ||
-    (data.espConnected && data.updatedAt && (Date.now() - new Date(data.updatedAt).getTime() < 30 * 1000) && (data.windmillRpm !== null || data.peltierCurrent !== null))
+    (data.espConnected && (data.windmillRpm !== null || data.peltierCurrent !== null))
   );
 
   // Active effective values strictly from physical station telemetry
